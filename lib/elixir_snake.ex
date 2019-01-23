@@ -35,26 +35,50 @@ defmodule ElixirSnake do
       fn x -> Map.put(x, "body", Enum.drop(x["body"], -1)) end
     )
 
-    obstacles = mySnakeNoTail["body"] ++ Enum.flat_map(otherSnakesNoTail, fn x -> x["body"] end)
+    # Own head is not an obstacle
+    obstacles = List.delete_at(mySnakeNoTail["body"], 0) ++ Enum.flat_map(otherSnakesNoTail, fn x -> x["body"] end)
 
     possibleDirections = obstacle_check(
       List.first(mySnakeNoTail["body"]),
       obstacles,
       board["board"]["height"],
       board["board"]["width"]
-    )
-
-    food_incentive(mySnakeNoTail, obstacles, board["board"]["food"])
+    ) |> Keyword.merge(foodIncentive(mySnakeNoTail, obstacles, board["board"]["food"]), fn _, v1, v2 -> v1 + v2 end)
 
     %{
       move: Enum.max_by(possibleDirections, fn {_,y} -> y end) |> Kernel.elem(0) |> Atom.to_string,
     }
   end
 
-  def food_incentive(snake, obstacles, food) do
+  def is_clear_path(current_coord, obstacles, end_coord) do
+    # TODO: Check different directions to start to get to the food?
+    # check if we have a collision, return false if so
+    collisions = Enum.filter(obstacles, fn x -> x["x"] == current_coord["x"] && x["y"] == current_coord["y"] end)
+    next_y_coord = if current_coord["y"] - end_coord["y"] < 0, do: current_coord["y"] + 1, else: current_coord["y"] - 1
+    next_x_coord = if current_coord["x"] - end_coord["x"] < 0, do: current_coord["x"] + 1, else: current_coord["x"] - 1
+
+    cond do
+      current_coord["x"] == end_coord["x"] && current_coord["y"] == end_coord["y"] -> true
+      current_coord["x"] == end_coord["x"] ->
+        is_clear_path(
+          %{current_coord | "y" => next_y_coord},
+          obstacles,
+          end_coord
+        )
+      Kernel.length(collisions) > 0 -> false
+      true ->
+        is_clear_path(
+          %{current_coord | "x" => next_x_coord},
+          obstacles,
+          end_coord
+        )
+    end
+  end
+
+  def foodIncentive(snake, obstacles, food) do
     # Keep snake away from food if not hungry enough.
     # Make snake go for food if it is under hunger level.
-    incentive = if (snake["hungry"] > 70), do: +25, else: -25
+    hungry = snake["health"] < 70
     snake_head = List.first(snake["body"])
 
     # Find the closest food that isn't blocked by a snake.
@@ -62,12 +86,21 @@ defmodule ElixirSnake do
       food,
       fn coord -> Map.merge(
         coord,
-        %{"x_travel" => abs(snake_head["x"] - coord["x"]), "y_travel" => abs(snake_head["y"] - coord["y"])})
+        %{"total_travel" => abs(snake_head["x"] - coord["x"]) + abs(snake_head["y"] - coord["y"])})
       end
-    )
+    ) |> Enum.sort(&(&1["total_travel"] < &2["total_travel"]))
+      |> Enum.filter(fn food -> is_clear_path(snake_head, obstacles, food) end)
+      |> List.first
 
-    # Eliminate food that has a snake in the way.
     IO.inspect(closestFood)
+
+    cond do
+      hungry && snake_head["x"] == closestFood["x"] && snake_head["y"] < closestFood["y"] -> [up: 0.25]
+      hungry && snake_head["x"] == closestFood["x"] && snake_head["y"] > closestFood["y"] -> [down: 0.25]
+      hungry && snake_head["y"] == closestFood["y"] && snake_head["x"] < closestFood["x"] -> [right: 0.25]
+      hungry && snake_head["y"] == closestFood["y"] && snake_head["x"] > closestFood["x"] -> [left: 0.25]
+      true -> []
+    end
   end
 
   def obstacle_check(snake_head, obstacles, board_height, board_width) do
