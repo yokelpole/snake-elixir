@@ -53,12 +53,18 @@ defmodule ElixirSnake do
     my_snake_no_tail = Map.put(
       board["you"],
       "body",
-      Enum.drop(board["you"]["body"], -1)
+      if(Kernel.length(board["you"]["body"]) > 1, do: Enum.drop(board["you"]["body"], -1), else: board["you"]["body"])
     )
 
     other_snakes_no_tail = Enum.map(
       Enum.reject(base_board["snakes"], fn x -> myId == x["id"] end),
-      fn x -> Map.put(x, "body", Enum.drop(x["body"], -1)) end
+      fn x ->
+        Map.put(
+          x,
+          "body",
+          if(Kernel.length(x["body"]) > 1, do: Enum.drop(x["body"], -1), else: x["body"])
+        )
+      end
     )
 
     board_map = get_board(
