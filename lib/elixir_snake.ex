@@ -143,23 +143,23 @@ defmodule ElixirSnake do
       ) |> Map.new
 
     # TODO: We don't care where snake head is now, we care where it might be.
-    other_snake_heads =
-      Enum.flat_map(
-        other_snakes,
-        fn snake ->
-          coord = List.first(Map.fetch!(snake, "body"))
-          %{ "x" => x, "y" => y } = coord
-          %{ "health" => snake_health } = snake
-          %{{ x, y } => %{
-            "type" => "snake_head",
-            # TODO: Don't attack snake head
-            # TODO: Use attack incentive
-            "value" => if(own_snake_health >= snake_health, do: @snake_body_val, else: @defend_incentive),
-            "adjusted_value" => 0,
-            "scanned" => false
-          }}
-        end
-      ) |> Map.new
+    #other_snake_heads =
+    #  Enum.flat_map(
+    #    other_snakes,
+    #    fn snake ->
+    #      coord = List.first(Map.fetch!(snake, "body"))
+    #      %{ "x" => x, "y" => y } = coord
+    #      %{ "health" => snake_health } = snake
+    #      %{{ x, y } => %{
+    #        "type" => "snake_head",
+    #        # TODO: Don't attack snake head
+    #        # TODO: Use attack incentive
+    #        "value" => if(own_snake_health >= snake_health, do: @snake_body_val, else: @defend_incentive),
+    #        "adjusted_value" => 0,
+    #        "scanned" => false
+    #      }}
+    #    end
+    #  ) |> Map.new
 
     food_map =
       Enum.flat_map(
@@ -177,7 +177,7 @@ defmodule ElixirSnake do
 
     Map.merge(empty_board, own_snake_map)
       |> Map.merge(other_snake_map)
-      |> Map.merge(other_snake_heads)
+      # |> Map.merge(other_snake_heads)
       |> Map.merge(food_map)
   end
 
