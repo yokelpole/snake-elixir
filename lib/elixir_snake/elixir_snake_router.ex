@@ -47,7 +47,7 @@ defmodule ElixirSnake.Router do
   post "/ping" do
     {:ok, _, conn} = read_body(conn)
 
-    send_resp(conn, 200, %{})
+    send_resp(conn, 200, Poison.encode!(%{}))
   end
 
   match _ do
