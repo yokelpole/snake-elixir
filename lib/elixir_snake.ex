@@ -15,7 +15,7 @@ defmodule ElixirSnake do
   @attack_incentive 5.0
   @defend_incentive -10.0
   @hard_object_score -2
-  @immediate_hard_object_score -50.0
+  @immediate_hard_object_score -500.0
 
   @doc """
     This is the response to Post /start
