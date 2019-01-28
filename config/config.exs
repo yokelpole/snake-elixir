@@ -29,4 +29,10 @@ use Mix.Config
 #
 #     import_config "#{Mix.env()}.exs"
 
-config :elixir_snake, cowboy_port: System.get_env("PORT") || 8085
+port =
+  case System.get_env("PORT") do
+    port when is_binary(port) -> String.to_integer(port)
+    nil -> 8085 # default port
+  end
+
+config :elixir_snake, cowboy_port: port
