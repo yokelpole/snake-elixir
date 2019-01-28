@@ -24,7 +24,8 @@ defmodule ElixirSnake.MixProject do
     [
       {:cowboy, "~> 2.5"},
       {:plug, "~> 1.6"},
-      {:poison, "~> 4.0"}
+      {:poison, "~> 4.0"},
+      {:exprof, "~> 0.2.0"}
     ]
   end
 end
