@@ -29,4 +29,4 @@ use Mix.Config
 #
 #     import_config "#{Mix.env()}.exs"
 
-config :elixir_snake, cowboy_port: 8085
+config :elixir_snake, cowboy_port: System.get_env("PORT") || 8085
