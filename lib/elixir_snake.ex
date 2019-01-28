@@ -5,15 +5,15 @@ defmodule ElixirSnake do
   import ExProf.Macro
 
   @snake_hunger 70
-  @multiplier_drop 0.70
-  @multiplier_cut_off 0.10
+  @multiplier_drop 0.75
+  @multiplier_cut_off 0.15
 
   @snake_body_val -2
   @open_space_val 2.5
   @food_incentive 25.0
   @food_avoid_incentive -0.1
   @attack_incentive 5.0
-  @defend_incentive -10.0
+  @defend_incentive -4.0
   @hard_object_score -2
   @immediate_hard_object_score -500.0
 
@@ -208,9 +208,9 @@ defmodule ElixirSnake do
         scanned == true && adjusted_value > apply_multiplier(value, multiplier) -> (
           board_map
         )
-        type == "snake_body" || type == "own_snake_body" && multiplier == 1.0 -> (
+        type == "snake_body" && multiplier == 1.0 || type == "own_snake_body" && multiplier == 1.0 -> (
           # Hack to keep snake from going back on itself when it doesn't like the nearby options.
-          # Should put in something better, but the likelihood of -50 is low.
+          # Should put in something better, but the likelihood of -500 is low.
           Map.put(board_map, {x,y}, %{ "type" => "wall", "scanned" => true, "adjusted_value" => @immediate_hard_object_score })
         )
         type == "snake_body" || type == "own_snake_body" -> (
