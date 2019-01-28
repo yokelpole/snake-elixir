@@ -85,31 +85,6 @@ defmodule ElixirSnake do
     }
   end
 
-  def is_clear_path(current_coord, obstacles, end_coord) do
-    # TODO: Check different directions to start to get to the food?
-    # check if we have a collision, return false if so
-    collisions = Enum.filter(obstacles, fn x -> x["x"] == current_coord["x"] && x["y"] == current_coord["y"] end)
-    next_y_coord = if current_coord["y"] - end_coord["y"] < 0, do: current_coord["y"] + 1, else: current_coord["y"] - 1
-    next_x_coord = if current_coord["x"] - end_coord["x"] < 0, do: current_coord["x"] + 1, else: current_coord["x"] - 1
-
-    cond do
-      current_coord["x"] == end_coord["x"] && current_coord["y"] == end_coord["y"] -> true
-      current_coord["x"] == end_coord["x"] ->
-        is_clear_path(
-          %{current_coord | "y" => next_y_coord},
-          obstacles,
-          end_coord
-        )
-      Kernel.length(collisions) > 0 -> false
-      true ->
-        is_clear_path(
-          %{current_coord | "x" => next_x_coord},
-          obstacles,
-          end_coord
-        )
-    end
-  end
-
   def get_board(own_snake, other_snakes, food, board_height, board_width) do
     # TODO: Implement attack/dodge incentive.
 
@@ -118,83 +93,68 @@ defmodule ElixirSnake do
     keys = Enum.flat_map(0..board_width, fn x -> calc_row.(x, board_height) end)
 
     # Make an empty board with all types set to free.
-    empty_board = Task.async(
-      fn ->
-        Enum.flat_map(
-          keys,
-          fn coord -> %{ coord => %{"type" => "free", "value" => @open_space_val }} end
-        ) |> Map.new
-      end
-    )
+    empty_board =
+      Enum.flat_map(
+        keys,
+        fn coord -> %{ coord => %{"type" => "free", "value" => @open_space_val }} end
+      ) |> Map.new
 
     # Place the user snake on the board.
     # TODO: Do we need to have an own_snake type?
-    own_snake_map = Task.async(
-      fn ->
-        Enum.flat_map(
-          own_snake["body"],
+    own_snake_map =
+      Enum.flat_map(
+        own_snake["body"],
+        fn coord ->
+          %{{ coord["x"],coord["y"] } => %{
+            "type" => "own_snake_body",
+            "value" => @snake_body_val
+          }}
+        end
+      ) |> Map.new
+
+    # Place other snakes on the board.
+    other_snake_map =
+      Enum.flat_map(
+        other_snakes,
+        fn snake -> Enum.flat_map(
+          snake["body"],
           fn coord ->
             %{{ coord["x"],coord["y"] } => %{
-              "type" => "own_snake_body",
+              "type" => "snake_body",
               "value" => @snake_body_val
             }}
           end
-        ) |> Map.new
-      end
-    )
-
-    # Place other snakes on the board.
-    other_snake_map = Task.async(
-      fn ->
-        Enum.flat_map(
-          other_snakes,
-          fn snake -> Enum.flat_map(
-            snake["body"],
-            fn coord ->
-              %{{ coord["x"],coord["y"] } => %{
-                "type" => "snake_body",
-                "value" => @snake_body_val
-              }}
-            end
-          ) end
-        ) |> Map.new
-      end
-    )
+        ) end
+      ) |> Map.new
 
     # TODO: We don't care where snake head is now, we care where it might be.
-    other_snake_heads = Task.async(
-      fn ->
-        Enum.flat_map(
-          other_snakes,
-          fn snake ->
-            coord = List.first(snake["body"])
-            %{ { coord["x"],coord["y"] } => %{
-              "type" => "snake_head",
-              # TODO: Don't attack snake head
-              # TODO: Use attack incentive
-              "value" => if(own_snake["health"] >= snake["health"], do: @snake_body_val, else: @defend_incentive)
-            }}
-          end
-        ) |> Map.new
-      end
-    )
+    other_snake_heads =
+      Enum.flat_map(
+        other_snakes,
+        fn snake ->
+          coord = List.first(snake["body"])
+          %{ { coord["x"],coord["y"] } => %{
+            "type" => "snake_head",
+            # TODO: Don't attack snake head
+            # TODO: Use attack incentive
+            "value" => if(own_snake["health"] >= snake["health"], do: @snake_body_val, else: @defend_incentive)
+          }}
+        end
+      ) |> Map.new
 
-    food_map = Task.async(
-      fn ->
-        Enum.flat_map(
-          food,
-          fn coord -> %{ { coord["x"],coord["y"] } => %{
-            "type" => "food",
-            "value" => if(own_snake["health"] < @snake_hunger, do: @food_incentive, else: @food_avoid_incentive)
-          }} end
-        ) |> Map.new
-      end
-    )
+    food_map =
+      Enum.flat_map(
+        food,
+        fn coord -> %{ { coord["x"],coord["y"] } => %{
+          "type" => "food",
+          "value" => if(own_snake["health"] < @snake_hunger, do: @food_incentive, else: @food_avoid_incentive)
+        }} end
+      ) |> Map.new
 
-    Map.merge(Task.await(empty_board), Task.await(own_snake_map))
-      |> Map.merge(Task.await(other_snake_map))
-      |> Map.merge(Task.await(other_snake_heads))
-      |> Map.merge(Task.await(food_map))
+    Map.merge(empty_board, own_snake_map)
+      |> Map.merge(other_snake_map)
+      |> Map.merge(other_snake_heads)
+      |> Map.merge(food_map)
   end
 
   def apply_multiplier(value, multiplier) do
